@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Legal & Akta Perusahaan Summarizer — Credit Underwriting Tool</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS (XLSX Export) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .editable-cell:focus {
+      outline: 2px solid #2563eb;
+      background-color: #eff6ff;
+      border-radius: 4px;
+    }
+    .flag-warning {
+      background-color: #fef3c7;
+      color: #92400e;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navbar -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-600 p-2 rounded-lg">
+          <i data-lucide="file-check-2" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight">Legal & Akta Perusahaan Summarizer</h1>
+          <p class="text-xs text-slate-400">Underwriting Pre-Screening & Kronologi Akta Generator (PDF to Excel)</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <!-- Demo Button -->
+        <button onclick="loadDemoData()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+          Muat Contoh Hasil (Demo)
+        </button>
+
+        <!-- API Key Input -->
+        <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-slate-400 mr-2"></i>
+          <input type="password" id="apiKeyInput" placeholder="Masukkan Gemini API Key..." 
+            class="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-40 sm:w-52"
+            onchange="saveApiKey(this.value)" />
+          <button onclick="toggleApiKeyVisibility()" class="text-slate-400 hover:text-white ml-1" title="Lihat/Sembunyikan API Key">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content: Split Screen -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+    <!-- LEFT PANEL: Upload & PDF Viewer (4 Cols) -->
+    <section class="lg:col-span-4 flex flex-col gap-4">
+      <!-- Upload Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <i data-lucide="upload-cloud" class="w-4 h-4 text-blue-600"></i>
+            1. Upload Bundel Dokumen Akta (PDF)
+          </h2>
+          <span class="text-[11px] bg-blue-50 text-blue-700 font-medium px-2 py-0.5 rounded">Multi-PDF Support</span>
+        </div>
+
+        <!-- Dropzone -->
+        <div id="dropZone" onclick="document.getElementById('pdfInput').click()"
+          class="border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 rounded-xl p-5 text-center cursor-pointer transition">
+          <input type="file" id="pdfInput" accept="application/pdf" multiple class="hidden" onchange="handleFiles(this.files)" />
+          <i data-lucide="files" class="w-8 h-8 text-blue-500 mx-auto mb-2"></i>
+          <p class="text-xs font-medium text-slate-700">Klik atau seret file PDF ke sini</p>
+          <p class="text-[11px] text-slate-400 mt-1">Akta Pendirian, Akta Perubahan, & SK Kemenkumham (Scan / Digital)</p>
+        </div>
+
+        <!-- Uploaded File List -->
+        <div id="fileListContainer" class="mt-3 hidden">
+          <div class="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+            <span id="fileCountText">0 file dipilih</span>
+            <button onclick="clearFiles()" class="text-red-500 hover:underline text-[11px]">Hapus Semua</button>
+          </div>
+          <ul id="fileList" class="space-y-1.5 max-h-40 overflow-y-auto pr-1"></ul>
+        </div>
+
+        <!-- Model Selection & Process Button -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-slate-600 font-medium">Model AI Pembaca Scan:</label>
+            <select id="modelSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500">
+              <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Cepat & Akurat)</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro (Scan Sulit/Kompleks)</option>
+            </select>
+          </div>
+
+          <button id="processBtn" onclick="processDocuments()" disabled
+            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-xs py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transition">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <span>Analisis & Ekstrak Kronologi Akta</span>
+          </button>
+        </div>
+
+        <!-- Status / Progress Indicator -->
+        <div id="statusBox" class="hidden mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-800 flex items-start gap-2.5">
+          <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent shrink-0 mt-0.5"></div>
+          <div>
+            <p id="statusTitle" class="font-semibold">Memproses dokumen...</p>
+            <p id="statusDesc" class="text-[11px] text-blue-600 mt-0.5">Membaca halaman scan PDF & menyusun urutan akta.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF Previewer Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col min-h-[380px]">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-500"></i>
+            Preview Dokumen PDF (Cross-Check Manual)
+          </h3>
+          <span id="previewFileName" class="text-[11px] text-slate-400 truncate max-w-[160px]">Belum ada file dipilih</span>
+        </div>
+        <div class="flex-1 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center">
+          <iframe id="pdfViewer" class="w-full h-full min-h-[340px] hidden" title="PDF Preview"></iframe>
+          <div id="pdfPlaceholder" class="text-center p-6 text-slate-400">
+            <i data-lucide="file-text" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+            <p class="text-xs">Klik nama file PDF di atas untuk memeriksa halaman asli atau scan buram.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Extraction Results & Excel Export (8 Cols) -->
+    <section class="lg:col-span-8 flex flex-col gap-4">
+
+      <!-- Action Header Bar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="table-properties" class="w-4 h-4 text-emerald-600"></i>
+            2. Hasil Ekstraksi Legal & Struktur Perusahaan
+          </h2>
+          <p class="text-[11px] text-slate-500 mt-0.5">Klik langsung pada teks di tabel untuk mengedit jika ada hasil scan yang perlu dikoreksi sebelum export.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="copyAolBtn" onclick="copyAolNotepad()" disabled
+            class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 font-semibold text-xs py-2 px-3 rounded-lg border border-slate-300 flex items-center gap-1.5 transition">
+            <i data-lucide="clipboard-copy" class="w-3.5 h-3.5 text-slate-600"></i>
+            Copy Notepad AOL
+          </button>
+
+          <button id="exportExcelBtn" onclick="exportToExcel()" disabled
+            class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-xs py-2 px-4 rounded-lg shadow-sm flex items-center gap-1.5 transition">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            Download Excel (.xlsx)
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State before extraction -->
+      <div id="emptyResultState" class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center flex-1 flex flex-col items-center justify-center">
+        <div class="bg-slate-100 p-4 rounded-full mb-3">
+          <i data-lucide="scale" class="w-8 h-8 text-slate-400"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-700">Belum Ada Data Akta yang Diekstrak</h3>
+        <p class="text-xs text-slate-500 max-w-md mt-1 leading-relaxed">
+          Unggah dokumen PDF akta perusahaan di panel sebelah kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>. Sistem akan otomatis menyusun urutan akta dari pendirian hingga perubahan terakhir, mendeteksi kepemilikan saham, masa jabatan direksi, serta menyiapkan file Excel siap unduh.
+        </p>
+      </div>
+
+      <!-- Results Container -->
+      <div id="resultContainer" class="hidden space-y-4">
+
+        <!-- Red Flag / Underwriting Alerts -->
+        <div id="alertsBox" class="hidden bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm">
+          <div class="flex items-start gap-2.5">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+            <div class="w-full">
+              <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider">Catatan Penting & Red Flag Underwriting</h4>
+              <ul id="alertsList" class="mt-1.5 text-xs text-amber-800 space-y-1 list-disc list-inside"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 1: Identitas Umum, Permodalan & Kewenangan Direksi -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="building-2" class="w-3.5 h-3.5 text-blue-400"></i>
+              Identitas Badan Usaha, Struktur Modal & Kewenangan Direksi
+            </span>
+            <span class="text-[10px] text-slate-300">Sheet 1: Ringkasan_Legal</span>
+          </div>
+          <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="space-y-2.5">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-400 uppercase">Nama Perusahaan</label>
+                <div id="resNamaPT" contenteditable="true" class="editable-cell font-bold text-sm text-slate-900 p-1 border border-transparent hover:border-slate-200">-</div>
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-slate-400 uppercase">Tempat Kedudukan & Alamat</label>
+                <div id="resAlamat" contenteditable="true" class="editable-cell text-slate-700 p-1 border border-transparent hover:border-slate-200">-</div>
+              </div>
+              <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <div>
+                  <span class="text-[10px] text-slate-400 block">Modal Dasar</span>
+                  <div id="resModalDasar" contenteditable="true" class="editable-cell font-semibold text-slate-800 mt-0.5">-</div>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">Modal Ditempatkan</span>
+                  <div id="resModalDitempatkan" contenteditable="true" class="editable-cell font-semibold text-slate-800 mt-0.5">-</div>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">Modal Disetor</span>
+                  <div id="resModalDisetor" contenteditable="true" class="editable-cell font-bold text-blue-700 mt-0.5">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2.5">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-400 uppercase">Kewenangan Direksi & Batasan Jaminan (Pasal 11/12)</label>
+                <div id="resKewenangan" contenteditable="true" class="editable-cell text-slate-700 bg-blue-50/60 border border-blue-100 rounded-lg p-2.5 leading-relaxed">-</div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[11px] font-semibold text-slate-400 uppercase">Masa Jabatan Pengurus</label>
+                  <div id="resMasaJabatan" contenteditable="true" class="editable-cell font-medium text-slate-800 p-1 border border-transparent hover:border-slate-200">-</div>
+                </div>
+                <div>
+                  <label class="text-[11px] font-semibold text-slate-400 uppercase">Status Kelengkapan SK AHU</label>
+                  <div id="resStatusAHU" contenteditable="true" class="editable-cell font-medium text-slate-800 p-1 border border-transparent hover:border-slate-200">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Tabel Kronologi Akta (Pendirian s/d Terakhir) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="history" class="w-3.5 h-3.5 text-amber-400"></i>
+              Urutan Kronologi Akta (Pendirian s/d Perubahan Terakhir)
+            </span>
+            <span class="text-[10px] text-slate-300">Sheet 2: Kronologi_Akta</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-[11px] uppercase">
+                  <th class="py-2.5 px-3 w-12 text-center">No</th>
+                  <th class="py-2.5 px-3">Jenis Akta</th>
+                  <th class="py-2.5 px-3">No. Akta</th>
+                  <th class="py-2.5 px-3">Tanggal Akta</th>
+                  <th class="py-2.5 px-3">Nama & Kedudukan Notaris</th>
+                  <th class="py-2.5 px-3">No. & Tgl SK / SPPP AHU</th>
+                  <th class="py-2.5 px-3">Pokok Perubahan / Isi Akta</th>
+                </tr>
+              </thead>
+              <tbody id="kronologiTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card 3: Susunan Pengurus (Direksi & Komisaris) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Susunan Pengurus Terkini (Direksi & Dewan Komisaris)
+            </span>
+            <span class="text-[10px] text-slate-300">Sheet 3: Susunan_Pengurus</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-[11px] uppercase">
+                  <th class="py-2.5 px-3">Nama Lengkap</th>
+                  <th class="py-2.5 px-3">Jabatan</th>
+                  <th class="py-2.5 px-3">NIK / NPWP</th>
+                  <th class="py-2.5 px-3">Tgl Pengangkatan</th>
+                  <th class="py-2.5 px-3">Est. Akhir Jabatan</th>
+                  <th class="py-2.5 px-3">Keterangan / Status</th>
+                </tr>
+              </thead>
+              <tbody id="pengurusTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card 4: Susunan Pemegang Saham & Beneficial Owner -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i>
+              Komposisi Pemegang Saham & Identifikasi Beneficial Owner (BO)
+            </span>
+            <span class="text-[10px] text-slate-300">Sheet 4: Pemegang_Saham</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-[11px] uppercase">
+                  <th class="py-2.5 px-3">Nama Pemegang Saham</th>
+                  <th class="py-2.5 px-3">Tipe</th>
+                  <th class="py-2.5 px-3">NIK / NPWP</th>
+                  <th class="py-2.5 px-3 text-right">Jumlah Saham</th>
+                  <th class="py-2.5 px-3 text-right">Nominal (Rp)</th>
+                  <th class="py-2.5 px-3 text-right">% Saham</th>
+                  <th class="py-2.5 px-3">Catatan BO / SLIK</th>
+                </tr>
+              </thead>
+              <tbody id="sahamTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card 5: Bidang Usaha / KBLI -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="briefcase" class="w-3.5 h-3.5 text-cyan-400"></i>
+              Maksud & Tujuan Usaha (KBLI Pasal 3)
+            </span>
+            <span class="text-[10px] text-slate-300">Sheet 5: Daftar_KBLI</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-[11px] uppercase">
+                  <th class="py-2.5 px-3 w-28">Kode KBLI</th>
+                  <th class="py-2.5 px-3">Judul & Uraian Bidang Usaha</th>
+                </tr>
+              </thead>
+              <tbody id="kbliTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
+    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMsg">Berhasil disalin!</span>
+  </div>
+
+  <script>
+    // Initialize Icons
+    lucide.createIcons();
+
+    let uploadedFiles = [];
+    let currentData = null;
+
+    // Load saved API key on startup
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedKey = localStorage.getItem('gemini_legal_api_key');
+      if (savedKey) {
+        document.getElementById('apiKeyInput').value = savedKey;
+      }
+    });
+
+    function saveApiKey(val) {
+      localStorage.setItem('gemini_legal_api_key', val.trim());
+      showToast('API Key disimpan secara lokal di browser.');
+    }
+
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('apiKeyInput');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // Drag & Drop Handlers
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+      if (e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+
+    function handleFiles(files) {
+      const pdfs = Array.from(files).filter(f => f.type === 'application/pdf');
+      if (pdfs.length === 0) {
+        alert('Mohon unggah file dengan format PDF.');
+        return;
+      }
+      uploadedFiles = [...uploadedFiles, ...pdfs];
+      renderFileList();
+      if (uploadedFiles.length > 0) {
+        previewPDF(0);
+      }
+    }
+
+    function renderFileList() {
+      const container = document.getElementById('fileListContainer');
+      const list = document.getElementById('fileList');
+      const countText = document.getElementById('fileCountText');
+      const processBtn = document.getElementById('processBtn');
+
+      if (uploadedFiles.length === 0) {
+        container.classList.add('hidden');
+        processBtn.disabled = true;
+        return;
+      }
+
+      container.classList.remove('hidden');
+      processBtn.disabled = false;
+      countText.textContent = `${uploadedFiles.length} file PDF siap dianalisis`;
+
+      list.innerHTML = uploadedFiles.map((file, idx) => `
+        <li class="flex items-center justify-between bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs group transition">
+          <button onclick="previewPDF(${idx})" class="flex items-center gap-2 text-left truncate flex-1 text-slate-700 hover:text-blue-700 font-medium">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-red-500 shrink-0"></i>
+            <span class="truncate">${file.name}</span>
+            <span class="text-[10px] text-slate-400 shrink-0">(${(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+          </button>
+          <button onclick="removeFile(${idx})" class="text-slate-400 hover:text-red-600 ml-2" title="Hapus file">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </li>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function removeFile(index) {
+      uploadedFiles.splice(index, 1);
+      renderFileList();
+      if (uploadedFiles.length === 0) {
+        document.getElementById('pdfViewer').classList.add('hidden');
+        document.getElementById('pdfPlaceholder').classList.remove('hidden');
+        document.getElementById('previewFileName').textContent = 'Belum ada file dipilih';
+      }
+    }
+
+    function clearFiles() {
+      uploadedFiles = [];
+      renderFileList();
+      document.getElementById('pdfViewer').classList.add('hidden');
+      document.getElementById('pdfPlaceholder').classList.remove('hidden');
+      document.getElementById('previewFileName').textContent = 'Belum ada file dipilih';
+    }
+
+    function previewPDF(index) {
+      const file = uploadedFiles[index];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const viewer = document.getElementById('pdfViewer');
+      const placeholder = document.getElementById('pdfPlaceholder');
+      viewer.src = url;
+      viewer.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      document.getElementById('previewFileName').textContent = file.name;
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64String = reader.result.split(',')[1];
+          resolve(base64String);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Main Extraction Function using Gemini API
+    async function processDocuments() {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      if (!apiKey) {
+        alert('Silakan masukkan Gemini API Key Anda terlebih dahulu di pojok kanan atas.');
+        document.getElementById('apiKeyInput').focus();
+        return;
+      }
+
+      if (uploadedFiles.length === 0) return;
+
+      const model = document.getElementById('modelSelect').value;
+      const processBtn = document.getElementById('processBtn');
+      const statusBox = document.getElementById('statusBox');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusDesc = document.getElementById('statusDesc');
+
+      processBtn.disabled = true;
+      statusBox.classList.remove('hidden');
+      statusTitle.textContent = `Membaca ${uploadedFiles.length} dokumen PDF...`;
+      statusDesc.textContent = 'Mengonversi halaman scan & mengirim ke AI Legal Analyzer.';
+
+      try {
+        const fileParts = [];
+        for (const file of uploadedFiles) {
+          const base64Data = await fileToBase64(file);
+          fileParts.push({
+            inlineData: {
+              mimeType: 'application/pdf',
+              data: base64Data
+            }
+          });
+        }
+
+        statusTitle.textContent = 'Mengekstrak & mengurutkan kronologi akta...';
+        statusDesc.textContent = 'Memeriksa No. Akta, Notaris, SK AHU, Susunan Saham, Pengurus & Pasal Kewenangan.';
+
+        const promptText = `Anda adalah Senior Legal & Credit Underwriting Analyst di perusahaan pembiayaan (multifinance) di Indonesia.
+Tugas Anda adalah membaca seluruh dokumen PDF akta perusahaan dan/atau SK Kemenkumham yang dilampirkan (baik PDF teks maupun hasil scan), lalu mengekstrak seluruh informasi legal penting secara akurat dan terstruktur.
+
+ATURAN WAJIB:
+1. Urutkan daftar akta secara KRONOLOGIS dari yang paling awal (Akta Pendirian) hingga yang paling baru (Akta Perubahan Terakhir) berdasarkan tanggal akta.
+2. Jika ada tulisan atau angka pada hasil scan yang buram, terpotong, tertutup stempel, atau meragukan, JANGAN MENGARANG. Wajib tambahkan tag "[PERLU CEK MANUAL]" di sebelah data tersebut.
+3. Periksa masa jabatan Direksi dan Dewan Komisaris (umumnya 3 atau 5 tahun sejak tanggal pengangkatan di akta terakhir) dan bandingkan dengan tahun saat ini (2026) untuk mendeteksi apakah masa jabatan sudah kedaluwarsa.
+4. Periksa komposisi pemegang saham: tandai pemegang saham individu mayoritas (>=25%) sebagai Ultimate Beneficial Owner (BO), dan jika ada pemegang saham berbentuk Badan Hukum (PT/CV/Yayasan), berikan peringatan bahwa dokumen legal perusahaan induk wajib dilampirkan untuk SLIK & CDD.
+5. Periksa Pasal Kewenangan Direksi (biasanya Pasal 11 atau Pasal 12): jelaskan siapa yang berhak menandatangani perjanjian kredit/pembiayaan dan apakah penjaminan aset memerlukan persetujuan tertulis Dewan Komisaris atau RUPS.
+
+Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) dengan struktur persis seperti berikut:
+{
+  "nama_perusahaan": "string",
+  "tempat_kedudukan_alamat": "string",
+  "modal_dasar": "string (contoh: Rp 10.000.000.000)",
+  "modal_ditempatkan": "string",
+  "modal_disetor": "string",
+  "kewenangan_direksi": "string penjelasan detail pasal kewenangan direksi & persetujuan komisaris/RUPS",
+  "masa_jabatan_ketentuan": "string (contoh: 5 Tahun - Berlaku s/d 12 Mei 2028)",
+  "status_kelengkapan_ahu": "string (contoh: Lengkap / Ada Akta Belum Dilampiri SK AHU)",
+  "red_flags": [
+    "string daftar peringatan penting untuk analis kredit (misal: pemegang saham PT, masa jabatan hampir habis, scan buram pada halaman X, dll)"
+  ],
+  "kronologi_akta": [
+    {
+      "urutan": 1,
+      "jenis_akta": "Akta Pendirian / Akta Perubahan I / Akta Perubahan Terakhir",
+      "nomor_akta": "string",
+      "tanggal_akta": "DD/MM/YYYY",
+      "notaris": "Nama Notaris & Kota Kedudukan",
+      "sk_ahu": "Nomor & Tanggal SK Pengesahan / SPPP AHU (atau 'Belum Terlampir')",
+      "pokok_perubahan": "Ringkasan padat isi/perubahan utama pada akta ini"
+    }
+  ],
+  "susunan_pengurus": [
+    {
+      "nama": "string",
+      "jabatan": "Direktur Utama / Direktur / Komisaris Utama / Komisaris",
+      "nik_npwp": "string",
+      "tanggal_angkat": "DD/MM/YYYY",
+      "estimasi_akhir_jabatan": "DD/MM/YYYY",
+      "status": "Aktif / Kedaluwarsa / Perlu Cek"
+    }
+  ],
+  "pemegang_saham": [
+    {
+      "nama": "string",
+      "tipe": "Perorangan / Badan Hukum (PT)",
+      "nik_npwp": "string",
+      "jumlah_lembar": "string",
+      "nominal_rupiah": "string",
+      "persentase": "string (contoh: 60%)",
+      "catatan_bo": "UBO (Wajib SLIK) / Wajib Lampirkan Akta Induk / Non-BO"
+    }
+  ],
+  "daftar_kbli": [
+    {
+      "kode": "5 digit kode KBLI",
+      "uraian": "Judul & deskripsi bidang usaha"
+    }
+  ]
+}`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                ...fileParts,
+                { text: promptText }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || `HTTP Error ${response.status}`);
+        }
+
+        const result = await response.json();
+        const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) throw new Error('Tidak ada respons teks dari AI.');
+
+        const parsedData = JSON.parse(rawText);
+        currentData = parsedData;
+        renderResults(parsedData);
+        showToast('Ekstraksi dokumen akta berhasil!');
+
+      } catch (err) {
+        console.error(err);
+        alert(`Terjadi kesalahan saat memproses dokumen:\n${err.message}\n\nPastikan API Key valid dan ukuran total PDF tidak melebihi batas.`);
+      } finally {
+        processBtn.disabled = false;
+        statusBox.classList.add('hidden');
+      }
+    }
+
+    function formatCellHighlight(text) {
+      if (!text) return '-';
+      const str = String(text);
+      if (str.includes('[PERLU CEK MANUAL]') || str.toLowerCase().includes('kedaluwarsa') || str.toLowerCase().includes('belum terlampir')) {
+        return `<span class="flag-warning">${str}</span>`;
+      }
+      return str;
+    }
+
+    function renderResults(data) {
+      document.getElementById('emptyResultState').classList.add('hidden');
+      document.getElementById('resultContainer').classList.remove('hidden');
+      document.getElementById('exportExcelBtn').disabled = false;
+      document.getElementById('copyAolBtn').disabled = false;
+
+      // Red Flags
+      const alertsBox = document.getElementById('alertsBox');
+      const alertsList = document.getElementById('alertsList');
+      if (data.red_flags && data.red_flags.length > 0) {
+        alertsBox.classList.remove('hidden');
+        alertsList.innerHTML = data.red_flags.map(flag => `<li>${flag}</li>`).join('');
+      } else {
+        alertsBox.classList.add('hidden');
+      }
+
+      // General Info
+      document.getElementById('resNamaPT').innerHTML = formatCellHighlight(data.nama_perusahaan);
+      document.getElementById('resAlamat').innerHTML = formatCellHighlight(data.tempat_kedudukan_alamat);
+      document.getElementById('resModalDasar').innerHTML = formatCellHighlight(data.modal_dasar);
+      document.getElementById('resModalDitempatkan').innerHTML = formatCellHighlight(data.modal_ditempatkan);
+      document.getElementById('resModalDisetor').innerHTML = formatCellHighlight(data.modal_disetor);
+      document.getElementById('resKewenangan').innerHTML = formatCellHighlight(data.kewenangan_direksi);
+      document.getElementById('resMasaJabatan').innerHTML = formatCellHighlight(data.masa_jabatan_ketentuan);
+      document.getElementById('resStatusAHU').innerHTML = formatCellHighlight(data.status_kelengkapan_ahu);
+
+      // Kronologi Akta Table
+      const kronologiBody = document.getElementById('kronologiTableBody');
+      kronologiBody.innerHTML = (data.kronologi_akta || []).map((item, idx) => `
+        <tr class="hover:bg-slate-50">
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 text-center font-bold text-slate-700">${item.urutan || idx + 1}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-semibold text-blue-700">${formatCellHighlight(item.jenis_akta)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-medium">${formatCellHighlight(item.nomor_akta)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 whitespace-nowrap">${formatCellHighlight(item.tanggal_akta)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3">${formatCellHighlight(item.notaris)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3">${formatCellHighlight(item.sk_ahu)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 text-slate-600">${formatCellHighlight(item.pokok_perubahan)}</td>
+        </tr>
+      `).join('');
+
+      // Susunan Pengurus Table
+      const pengurusBody = document.getElementById('pengurusTableBody');
+      pengurusBody.innerHTML = (data.susunan_pengurus || []).map(p => `
+        <tr class="hover:bg-slate-50">
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-semibold text-slate-800">${formatCellHighlight(p.nama)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3">${formatCellHighlight(p.jabatan)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-mono text-[11px]">${formatCellHighlight(p.nik_npwp)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 whitespace-nowrap">${formatCellHighlight(p.tanggal_angkat)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 whitespace-nowrap">${formatCellHighlight(p.estimasi_akhir_jabatan)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3">${formatCellHighlight(p.status)}</td>
+        </tr>
+      `).join('');
+
+      // Pemegang Saham Table
+      const sahamBody = document.getElementById('sahamTableBody');
+      sahamBody.innerHTML = (data.pemegang_saham || []).map(s => `
+        <tr class="hover:bg-slate-50">
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-semibold text-slate-800">${formatCellHighlight(s.nama)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3">${formatCellHighlight(s.tipe)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-mono text-[11px]">${formatCellHighlight(s.nik_npwp)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 text-right">${formatCellHighlight(s.jumlah_lembar)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 text-right font-medium">${formatCellHighlight(s.nominal_rupiah)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 text-right font-bold text-blue-700">${formatCellHighlight(s.persentase)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3">${formatCellHighlight(s.catatan_bo)}</td>
+        </tr>
+      `).join('');
+
+      // KBLI Table
+      const kbliBody = document.getElementById('kbliTableBody');
+      kbliBody.innerHTML = (data.daftar_kbli || []).map(k => `
+        <tr class="hover:bg-slate-50">
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 font-mono font-bold text-slate-700">${formatCellHighlight(k.kode)}</td>
+          <td contenteditable="true" class="editable-cell py-2.5 px-3 text-slate-700">${formatCellHighlight(k.uraian)}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Sync edited HTML tables back to clean JSON object before export
+    function scrapeEditedData() {
+      const cleanText = (el) => el ? el.innerText.trim() : '-';
+
+      const namaPT = cleanText(document.getElementById('resNamaPT'));
+      const alamat = cleanText(document.getElementById('resAlamat'));
+      const modalDasar = cleanText(document.getElementById('resModalDasar'));
+      const modalDitempatkan = cleanText(document.getElementById('resModalDitempatkan'));
+      const modalDisetor = cleanText(document.getElementById('resModalDisetor'));
+      const kewenangan = cleanText(document.getElementById('resKewenangan'));
+      const masaJabatan = cleanText(document.getElementById('resMasaJabatan'));
+      const statusAHU = cleanText(document.getElementById('resStatusAHU'));
+
+      const kronologi = Array.from(document.querySelectorAll('#kronologiTableBody tr')).map(tr => {
+        const tds = tr.querySelectorAll('td');
+        return {
+          Urutan: cleanText(tds[0]),
+          Jenis_Akta: cleanText(tds[1]),
+          No_Akta: cleanText(tds[2]),
+          Tanggal_Akta: cleanText(tds[3]),
+          Nama_Kedudukan_Notaris: cleanText(tds[4]),
+          No_Tgl_SK_AHU: cleanText(tds[5]),
+          Pokok_Perubahan: cleanText(tds[6])
+        };
+      });
+
+      const pengurus = Array.from(document.querySelectorAll('#pengurusTableBody tr')).map(tr => {
+        const tds = tr.querySelectorAll('td');
+        return {
+          Nama_Lengkap: cleanText(tds[0]),
+          Jabatan: cleanText(tds[1]),
+          NIK_NPWP: cleanText(tds[2]),
+          Tanggal_Pengangkatan: cleanText(tds[3]),
+          Estimasi_Akhir_Jabatan: cleanText(tds[4]),
+          Status: cleanText(tds[5])
+        };
+      });
+
+      const saham = Array.from(document.querySelectorAll('#sahamTableBody tr')).map(tr => {
+        const tds = tr.querySelectorAll('td');
+        return {
+          Nama_Pemegang_Saham: cleanText(tds[0]),
+          Tipe: cleanText(tds[1]),
+          NIK_NPWP: cleanText(tds[2]),
+          Jumlah_Lembar_Saham: cleanText(tds[3]),
+          Nominal_Rupiah: cleanText(tds[4]),
+          Persentase: cleanText(tds[5]),
+          Catatan_BO_SLIK: cleanText(tds[6])
+        };
+      });
+
+      const kbli = Array.from(document.querySelectorAll('#kbliTableBody tr')).map(tr => {
+        const tds = tr.querySelectorAll('td');
+        return {
+          Kode_KBLI: cleanText(tds[0]),
+          Uraian_Bidang_Usaha: cleanText(tds[1])
+        };
+      });
+
+      const alerts = Array.from(document.querySelectorAll('#alertsList li')).map(li => li.innerText.trim());
+
+      return {
+        namaPT, alamat, modalDasar, modalDitempatkan, modalDisetor,
+        kewenangan, masaJabatan, statusAHU, alerts,
+        kronologi, pengurus, saham, kbli
+      };
+    }
+
+    // Export to Multi-Sheet Excel (.xlsx)
+    function exportToExcel() {
+      const data = scrapeEditedData();
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Ringkasan Legal
+      const summaryRows = [
+        ['RINGKASAN LEGAL & UNDERWRITING AKTA PERUSAHAAN'],
+        ['Tanggal Generate', new Date().toLocaleDateString('id-ID')],
+        [''],
+        ['PARAMETER LEGAL', 'KETERANGAN / HASIL EKSTRAKSI'],
+        ['Nama Perusahaan', data.namaPT],
+        ['Tempat Kedudukan & Alamat', data.alamat],
+        ['Modal Dasar', data.modalDasar],
+        ['Modal Ditempatkan', data.modalDitempatkan],
+        ['Modal Disetor', data.modalDisetor],
+        ['Ketentuan Masa Jabatan', data.masaJabatan],
+        ['Status Kelengkapan SK AHU', data.statusAHU],
+        ['Kewenangan Direksi & Persetujuan Jaminan', data.kewenangan],
+        [''],
+        ['CATATAN PENTING / RED FLAG UNDERWRITING'],
+        ...(data.alerts.length ? data.alerts.map((a, i) => [`${i + 1}.`, a]) : [['-', 'Tidak ada catatan khusus']])
+      ];
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+      wsSummary['!cols'] = [{ wch: 38 }, { wch: 85 }];
+      XLSX.utils.book_append_sheet(wb, wsSummary, '1_Ringkasan_Legal');
+
+      // Sheet 2: Kronologi Akta
+      const wsKronologi = XLSX.utils.json_to_sheet(data.kronologi);
+      wsKronologi['!cols'] = [
+        { wch: 8 }, { wch: 24 }, { wch: 15 }, { wch: 15 }, { wch: 35 }, { wch: 35 }, { wch: 50 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsKronologi, '2_Kronologi_Akta');
+
+      // Sheet 3: Susunan Pengurus
+      const wsPengurus = XLSX.utils.json_to_sheet(data.pengurus);
+      wsPengurus['!cols'] = [
+        { wch: 30 }, { wch: 22 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 22 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsPengurus, '3_Susunan_Pengurus');
+
+      // Sheet 4: Pemegang Saham
+      const wsSaham = XLSX.utils.json_to_sheet(data.saham);
+      wsSaham['!cols'] = [
+        { wch: 32 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 12 }, { wch: 35 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsSaham, '4_Pemegang_Saham');
+
+      // Sheet 5: Daftar KBLI
+      const wsKbli = XLSX.utils.json_to_sheet(data.kbli);
+      wsKbli['!cols'] = [{ wch: 15 }, { wch: 70 }];
+      XLSX.utils.book_append_sheet(wb, wsKbli, '5_Daftar_KBLI');
+
+      const safeFileName = data.namaPT.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+      XLSX.writeFile(wb, `Legal_Summary_${safeFileName || 'Perusahaan'}.xlsx`);
+      showToast('File Excel (.xlsx) berhasil diunduh!');
+    }
+
+    // Copy Format Notepad AOL / Memo Kredit
+    function copyAolNotepad() {
+      const data = scrapeEditedData();
+      const firstAkta = data.kronologi[0] || {};
+      const lastAkta = data.kronologi[data.kronologi.length - 1] || {};
+
+      const pengurusStr = data.pengurus.map(p => `${p.Jabatan}: ${p.Nama_Lengkap} (${p.Status})`).join(' | ');
+      const sahamStr = data.saham.map(s => `${s.Nama_Pemegang_Saham} (${s.Persentase} / ${s.Nominal_Rupiah})`).join(', ');
+
+      const notepadText = `***LEGAL CHECKING - AKTA PERUSAHAAN***
+NAMA DEBITUR: ${data.namaPT.toUpperCase()}
+1. PENDIRIAN: AKTA NO. ${firstAkta.No_Akta || '-'} TGL ${firstAkta.Tanggal_Akta || '-'} (${firstAkta.Nama_Kedudukan_Notaris || '-'}), SK: ${firstAkta.No_Tgl_SK_AHU || '-'}.
+2. PERUBAHAN TERAKHIR: AKTA NO. ${lastAkta.No_Akta || '-'} TGL ${lastAkta.Tanggal_Akta || '-'} (${lastAkta.Nama_Kedudukan_Notaris || '-'}), SK: ${lastAkta.No_Tgl_SK_AHU || '-'}.
+3. PERMODALAN: DASAR ${data.modalDasar} | DITEMPATKAN ${data.modalDitempatkan} | DISETOR ${data.modalDisetor}.
+4. PENGURUS (${data.masaJabatan.toUpperCase()}): ${pengurusStr.toUpperCase()}.
+5. PEMEGANG SAHAM: ${sahamStr.toUpperCase()}.
+6. KEWENANGAN DIREKSI: ${data.kewenangan.toUpperCase()}.`;
+
+      navigator.clipboard.writeText(notepadText).then(() => {
+        showToast('Format Notepad AOL berhasil disalin ke clipboard!');
+      });
+    }
+
+    // Load Demo Data for Testing Without API Key
+    function loadDemoData() {
+      const demo = {
+        nama_perusahaan: "PT BORNEO TRANS LOGISTIK MANDIRI",
+        tempat_kedudukan_alamat: "Kota Balikpapan, Kalimantan Timur — Jl. Mulawarman No. 88, Kel. Sepinggan",
+        modal_dasar: "Rp 20.000.000.000",
+        modal_ditempatkan: "Rp 10.000.000.000",
+        modal_disetor: "Rp 10.000.000.000",
+        kewenangan_direksi: "Berdasarkan Pasal 11 Anggaran Dasar: Direktur Utama berhak dan berwenang bertindak untuk dan atas nama Direksi serta mewakili Perseroan. Namun, untuk meminjam uang dan menjaminkan harta kekayaan Perseroan (termasuk objek fidusia), Direksi WAJIB mendapat persetujuan tertulis dari Dewan Komisaris.",
+        masa_jabatan_ketentuan: "5 Tahun (Berlaku s/d 14 Februari 2029)",
+        status_kelengkapan_ahu: "Lengkap (SK Pengesahan & SPPP AHU terlampir)",
+        red_flags: [
+          "Pemegang saham PT KARYA ENERGI NUSANTARA (35%) berbentuk Badan Hukum: Wajib melampirkan Akta Pendirian, Akta Terakhir, NIB, dan NPWP perusahaan induk tersebut untuk pengecekan Beneficial Owner & SLIK.",
+          "Sesuai Pasal 11 AD, Surat Persetujuan Dewan Komisaris wajib ditandatangani saat akad pembiayaan & pengikatan fidusia.",
+          "Nomor NIK Komisaris pada halaman 14 scan agak buram [PERLU CEK MANUAL] dengan FC E-KTP."
+        ],
+        kronologi_akta: [
+          {
+            urutan: 1,
+            jenis_akta: "Akta Pendirian",
+            nomor_akta: "14",
+            tanggal_akta: "10/06/2018",
+            notaris: "Hendra Gunawan, S.H., M.Kn. (Kota Balikpapan)",
+            sk_ahu: "AHU-0028412.AH.01.01.Tahun 2018 (15/06/2018)",
+            pokok_perubahan: "Pendirian PT dengan Modal Dasar Rp 4 Miliar, Modal Disetor Rp 1 Miliar. Bidang usaha Angkutan Bermotor & Perdagangan Umum."
+          },
+          {
+            urutan: 2,
+            jenis_akta: "Akta Perubahan I (Pernyataan Keputusan RUPS)",
+            nomor_akta: "29",
+            tanggal_akta: "22/09/2021",
+            notaris: "Hendra Gunawan, S.H., M.Kn. (Kota Balikpapan)",
+            sk_ahu: "AHU-0051902.AH.01.02.Tahun 2021 (25/09/2021)",
+            pokok_perubahan: "Penyesuaian Maksud & Tujuan sesuai KBLI 2020 serta peningkatan Modal Disetor menjadi Rp 5 Miliar."
+          },
+          {
+            urutan: 3,
+            jenis_akta: "Akta Perubahan Terakhir (Pernyataan Keputusan Pemegang Saham)",
+            nomor_akta: "07",
+            tanggal_akta: "14/02/2024",
+            notaris: "Rina Marlina, S.H., M.Kn. (Kota Samarinda)",
+            sk_ahu: "AHU-0011204.AH.01.02.Tahun 2024 & SPPP AHU-AH.01.09-0067812 (16/02/2024)",
+            pokok_perubahan: "Peningkatan Modal Disetor menjadi Rp 10 Miliar, masuknya pemegang saham baru PT Karya Energi Nusantara (35%), serta pengangkatan kembali pengurus untuk masa jabatan 5 tahun."
+          }
+        ],
+        susunan_pengurus: [
+          {
+            nama: "Budi Hartono, S.T.",
+            jabatan: "Direktur Utama",
+            nik_npwp: "6471051204800003",
+            tanggal_angkat: "14/02/2024",
+            estimasi_akhir_jabatan: "14/02/2029",
+            status: "Aktif"
+          },
+          {
+            nama: "Andi Pratama",
+            jabatan: "Direktur",
+            nik_npwp: "6471022508850001",
+            tanggal_angkat: "14/02/2024",
+            estimasi_akhir_jabatan: "14/02/2029",
+            status: "Aktif"
+          },
+          {
+            nama: "Ir. Sutrisno Wijaya",
+            jabatan: "Komisaris",
+            nik_npwp: "6471010311720008 [PERLU CEK MANUAL]",
+            tanggal_angkat: "14/02/2024",
+            estimasi_akhir_jabatan: "14/02/2029",
+            status: "Aktif"
+          }
+        ],
+        pemegang_saham: [
+          {
+            nama: "Budi Hartono, S.T.",
+            tipe: "Perorangan",
+            nik_npwp: "6471051204800003",
+            jumlah_lembar: "5.000",
+            nominal_rupiah: "Rp 5.000.000.000",
+            persentase: "50%",
+            catatan_bo: "Ultimate Beneficial Owner (UBO) - Wajib SLIK"
+          },
+          {
+            nama: "PT Karya Energi Nusantara",
+            tipe: "Badan Hukum (PT)",
+            nik_npwp: "02.418.992.1-722.000",
+            jumlah_lembar: "3.500",
+            nominal_rupiah: "Rp 3.500.000.000",
+            persentase: "35%",
+            catatan_bo: "Wajib Lampirkan Akta Induk, NIB & NPWP untuk SLIK"
+          },
+          {
+            nama: "Ir. Sutrisno Wijaya",
+            tipe: "Perorangan",
+            nik_npwp: "6471010311720008 [PERLU CEK MANUAL]",
+            jumlah_lembar: "1.500",
+            nominal_rupiah: "Rp 1.500.000.000",
+            persentase: "15%",
+            catatan_bo: "Pemegang Saham Minoritas / Komisaris"
+          }
+        ],
+        daftar_kbli: [
+          {
+            kode: "49431",
+            uraian: "Angkutan Bermotor untuk Barang Umum (pengangkutan barang menggunakan truk/trailer)"
+          },
+          {
+            kode: "49432",
+            uraian: "Angkutan Bermotor untuk Barang Khusus (angkutan hasil tambang/batu bara & alat berat)"
+          },
+          {
+            kode: "77393",
+            uraian: "Aktivitas Penyewaan dan Sewa Guna Usaha Tanpa Hak Opsi Mesin dan Peralatan Konstruksi"
+          }
+        ]
+      };
+
+      currentData = demo;
+      renderResults(demo);
+      showToast('Contoh hasil ekstraksi akta berhasil dimuat!');
+    }
+  </script>
+</body>
+</html>
