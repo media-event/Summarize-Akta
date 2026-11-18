@@ -44,7 +44,7 @@
         </div>
         <div>
           <h1 class="text-base sm:text-lg font-bold tracking-tight">Legal & Akta Perusahaan Summarizer</h1>
-          <p class="text-xs text-slate-400">Underwriting Pre-Screening & Kronologi Akta Generator (PDF to Excel)</p>
+          <p class="text-xs text-slate-400">Underwriting Pre-Screening & Kronologi Akta Generator (PT / CV — PDF to Excel)</p>
         </div>
       </div>
 
@@ -90,7 +90,7 @@
           <input type="file" id="pdfInput" accept="application/pdf" multiple class="hidden" onchange="handleFiles(this.files)" />
           <i data-lucide="files" class="w-8 h-8 text-blue-500 mx-auto mb-2"></i>
           <p class="text-xs font-medium text-slate-700">Klik atau seret file PDF ke sini</p>
-          <p class="text-[11px] text-slate-400 mt-1">Akta Pendirian, Akta Perubahan, & SK Kemenkumham (Scan / Digital)</p>
+          <p class="text-[11px] text-slate-400 mt-1">Akta Pendirian, Akta Perubahan, & SK Kemenkumham / SABU (Scan / Digital)</p>
         </div>
 
         <!-- Uploaded File List -->
@@ -107,8 +107,8 @@
           <div class="flex items-center justify-between">
             <label class="text-xs text-slate-600 font-medium">Model AI Pembaca Scan:</label>
             <select id="modelSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500">
-              <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Cepat & Akurat)</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro (Scan Sulit/Kompleks)</option>
+              <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (Cepat & Akurat)</option>
+              <option value="gemini-3.8-pro">Gemini 3.8 Pro (Scan Sulit/Kompleks)</option>
             </select>
           </div>
 
@@ -183,7 +183,7 @@
         </div>
         <h3 class="text-sm font-semibold text-slate-700">Belum Ada Data Akta yang Diekstrak</h3>
         <p class="text-xs text-slate-500 max-w-md mt-1 leading-relaxed">
-          Unggah dokumen PDF akta perusahaan di panel sebelah kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>. Sistem akan otomatis menyusun urutan akta dari pendirian hingga perubahan terakhir, mendeteksi kepemilikan saham, masa jabatan direksi, serta menyiapkan file Excel siap unduh.
+          Unggah dokumen PDF akta perusahaan di panel sebelah kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>. Sistem akan otomatis menyusun urutan akta dari pendirian hingga perubahan terakhir, mendeteksi kepemilikan saham/modal, masa jabatan pengurus, serta menyiapkan file Excel siap unduh.
         </p>
       </div>
 
@@ -206,14 +206,14 @@
           <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs font-semibold flex items-center gap-2">
               <i data-lucide="building-2" class="w-3.5 h-3.5 text-blue-400"></i>
-              Identitas Badan Usaha, Struktur Modal & Kewenangan Direksi
+              Identitas Badan Usaha, Struktur Modal & Kewenangan Pengurus
             </span>
             <span class="text-[10px] text-slate-300">Sheet 1: Ringkasan_Legal</span>
           </div>
           <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div class="space-y-2.5">
               <div>
-                <label class="text-[11px] font-semibold text-slate-400 uppercase">Nama Perusahaan</label>
+                <label class="text-[11px] font-semibold text-slate-400 uppercase">Nama Perusahaan (PT / CV)</label>
                 <div id="resNamaPT" contenteditable="true" class="editable-cell font-bold text-sm text-slate-900 p-1 border border-transparent hover:border-slate-200">-</div>
               </div>
               <div>
@@ -238,7 +238,7 @@
 
             <div class="space-y-2.5">
               <div>
-                <label class="text-[11px] font-semibold text-slate-400 uppercase">Kewenangan Direksi & Batasan Jaminan (Pasal 11/12)</label>
+                <label class="text-[11px] font-semibold text-slate-400 uppercase">Kewenangan Direksi / Pesero Aktif & Batasan Jaminan</label>
                 <div id="resKewenangan" contenteditable="true" class="editable-cell text-slate-700 bg-blue-50/60 border border-blue-100 rounded-lg p-2.5 leading-relaxed">-</div>
               </div>
               <div class="grid grid-cols-2 gap-2">
@@ -247,7 +247,7 @@
                   <div id="resMasaJabatan" contenteditable="true" class="editable-cell font-medium text-slate-800 p-1 border border-transparent hover:border-slate-200">-</div>
                 </div>
                 <div>
-                  <label class="text-[11px] font-semibold text-slate-400 uppercase">Status Kelengkapan SK AHU</label>
+                  <label class="text-[11px] font-semibold text-slate-400 uppercase">Status Kelengkapan SK AHU / SABU</label>
                   <div id="resStatusAHU" contenteditable="true" class="editable-cell font-medium text-slate-800 p-1 border border-transparent hover:border-slate-200">-</div>
                 </div>
               </div>
@@ -273,7 +273,7 @@
                   <th class="py-2.5 px-3">No. Akta</th>
                   <th class="py-2.5 px-3">Tanggal Akta</th>
                   <th class="py-2.5 px-3">Nama & Kedudukan Notaris</th>
-                  <th class="py-2.5 px-3">No. & Tgl SK / SPPP AHU</th>
+                  <th class="py-2.5 px-3">No. & Tgl SK AHU / SABU</th>
                   <th class="py-2.5 px-3">Pokok Perubahan / Isi Akta</th>
                 </tr>
               </thead>
@@ -282,12 +282,12 @@
           </div>
         </div>
 
-        <!-- Card 3: Susunan Pengurus (Direksi & Komisaris) -->
+        <!-- Card 3: Susunan Pengurus (Direksi & Komisaris / Pesero Aktif & Komanditer) -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs font-semibold flex items-center gap-2">
               <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-400"></i>
-              Susunan Pengurus Terkini (Direksi & Dewan Komisaris)
+              Susunan Pengurus Terkini (Direksi & Komisaris / Pesero)
             </span>
             <span class="text-[10px] text-slate-300">Sheet 3: Susunan_Pengurus</span>
           </div>
@@ -296,7 +296,7 @@
               <thead>
                 <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-[11px] uppercase">
                   <th class="py-2.5 px-3">Nama Lengkap</th>
-                  <th class="py-2.5 px-3">Jabatan</th>
+                  <th class="py-2.5 px-3">Jabatan / Status Pesero</th>
                   <th class="py-2.5 px-3">NIK / NPWP</th>
                   <th class="py-2.5 px-3">Tgl Pengangkatan</th>
                   <th class="py-2.5 px-3">Est. Akhir Jabatan</th>
@@ -308,12 +308,12 @@
           </div>
         </div>
 
-        <!-- Card 4: Susunan Pemegang Saham & Beneficial Owner -->
+        <!-- Card 4: Susunan Pemegang Saham / Pemasukan Modal & Beneficial Owner -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs font-semibold flex items-center gap-2">
               <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i>
-              Komposisi Pemegang Saham & Identifikasi Beneficial Owner (BO)
+              Komposisi Pemegang Saham / Modal & Identifikasi Beneficial Owner (BO)
             </span>
             <span class="text-[10px] text-slate-300">Sheet 4: Pemegang_Saham</span>
           </div>
@@ -321,12 +321,12 @@
             <table class="w-full text-left border-collapse text-xs">
               <thead>
                 <tr class="bg-slate-100 text-slate-600 border-b border-slate-200 text-[11px] uppercase">
-                  <th class="py-2.5 px-3">Nama Pemegang Saham</th>
+                  <th class="py-2.5 px-3">Nama Pemegang Saham / Pesero</th>
                   <th class="py-2.5 px-3">Tipe</th>
                   <th class="py-2.5 px-3">NIK / NPWP</th>
                   <th class="py-2.5 px-3 text-right">Jumlah Saham</th>
                   <th class="py-2.5 px-3 text-right">Nominal (Rp)</th>
-                  <th class="py-2.5 px-3 text-right">% Saham</th>
+                  <th class="py-2.5 px-3 text-right">% Kepemilikan</th>
                   <th class="py-2.5 px-3">Catatan BO / SLIK</th>
                 </tr>
               </thead>
@@ -340,7 +340,7 @@
           <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs font-semibold flex items-center gap-2">
               <i data-lucide="briefcase" class="w-3.5 h-3.5 text-cyan-400"></i>
-              Maksud & Tujuan Usaha (KBLI Pasal 3)
+              Maksud & Tujuan Usaha (KBLI / Bidang Usaha)
             </span>
             <span class="text-[10px] text-slate-300">Sheet 5: Daftar_KBLI</span>
           </div>
@@ -539,30 +539,30 @@
         }
 
         statusTitle.textContent = 'Mengekstrak & mengurutkan kronologi akta...';
-        statusDesc.textContent = 'Memeriksa No. Akta, Notaris, SK AHU, Susunan Saham, Pengurus & Pasal Kewenangan.';
+        statusDesc.textContent = 'Memeriksa No. Akta, Notaris, SK AHU/SABU, Susunan Pengurus/Pesero & Kewenangan.';
 
         const promptText = `Anda adalah Senior Legal & Credit Underwriting Analyst di perusahaan pembiayaan (multifinance) di Indonesia.
-Tugas Anda adalah membaca seluruh dokumen PDF akta perusahaan dan/atau SK Kemenkumham yang dilampirkan (baik PDF teks maupun hasil scan), lalu mengekstrak seluruh informasi legal penting secara akurat dan terstruktur.
+Tugas Anda adalah membaca seluruh dokumen PDF akta perusahaan (baik berbentuk PT / Perseroan Terbatas maupun CV / Perseroan Komanditer) dan/atau SK Kemenkumham / Surat Keterangan Terdaftar SABU yang dilampirkan (baik PDF teks maupun hasil scan), lalu mengekstrak seluruh informasi legal penting secara akurat dan terstruktur.
 
 ATURAN WAJIB:
 1. Urutkan daftar akta secara KRONOLOGIS dari yang paling awal (Akta Pendirian) hingga yang paling baru (Akta Perubahan Terakhir) berdasarkan tanggal akta.
 2. Jika ada tulisan atau angka pada hasil scan yang buram, terpotong, tertutup stempel, atau meragukan, JANGAN MENGARANG. Wajib tambahkan tag "[PERLU CEK MANUAL]" di sebelah data tersebut.
-3. Periksa masa jabatan Direksi dan Dewan Komisaris (umumnya 3 atau 5 tahun sejak tanggal pengangkatan di akta terakhir) dan bandingkan dengan tahun saat ini (2026) untuk mendeteksi apakah masa jabatan sudah kedaluwarsa.
-4. Periksa komposisi pemegang saham: tandai pemegang saham individu mayoritas (>=25%) sebagai Ultimate Beneficial Owner (BO), dan jika ada pemegang saham berbentuk Badan Hukum (PT/CV/Yayasan), berikan peringatan bahwa dokumen legal perusahaan induk wajib dilampirkan untuk SLIK & CDD.
-5. Periksa Pasal Kewenangan Direksi (biasanya Pasal 11 atau Pasal 12): jelaskan siapa yang berhak menandatangani perjanjian kredit/pembiayaan dan apakah penjaminan aset memerlukan persetujuan tertulis Dewan Komisaris atau RUPS.
+3. Jika badan usaha berbentuk PT: periksa masa jabatan Direksi dan Dewan Komisaris (umumnya 3 atau 5 tahun sejak tanggal pengangkatan di akta terakhir) dan bandingkan dengan tahun saat ini (2026) untuk mendeteksi apakah masa jabatan sudah kedaluwarsa. Jika berbentuk CV: jelaskan masa kepengurusan (biasanya tidak terbatas/seumur hidup kecuali ditentukan lain) dan bedakan jelas antara Pesero Pengurus (Aktif/Direktur) dan Pesero Komanditer (Pasif).
+4. Periksa komposisi pemegang saham (untuk PT) atau pemasukan modal perseroan (untuk CV): tandai pihak pengendali/mayoritas sebagai Ultimate Beneficial Owner (BO), dan jika ada pemegang saham berbentuk Badan Hukum (PT/CV/Yayasan), berikan peringatan bahwa dokumen legal perusahaan induk wajib dilampirkan untuk SLIK & CDD.
+5. Periksa Pasal Kewenangan Direksi (PT) atau Kewenangan Pesero Pengurus (CV): jelaskan siapa yang berhak menandatangani perjanjian kredit/pembiayaan dan apakah penjaminan aset memerlukan persetujuan tertulis Dewan Komisaris / RUPS (pada PT) atau persetujuan Pesero Komanditer (pada CV).
 
 Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) dengan struktur persis seperti berikut:
 {
   "nama_perusahaan": "string",
   "tempat_kedudukan_alamat": "string",
-  "modal_dasar": "string (contoh: Rp 10.000.000.000)",
+  "modal_dasar": "string (contoh: Rp 10.000.000.000 atau 'Tidak disebutkan secara khusus dalam Akta CV')",
   "modal_ditempatkan": "string",
   "modal_disetor": "string",
-  "kewenangan_direksi": "string penjelasan detail pasal kewenangan direksi & persetujuan komisaris/RUPS",
-  "masa_jabatan_ketentuan": "string (contoh: 5 Tahun - Berlaku s/d 12 Mei 2028)",
-  "status_kelengkapan_ahu": "string (contoh: Lengkap / Ada Akta Belum Dilampiri SK AHU)",
+  "kewenangan_direksi": "string penjelasan detail pasal kewenangan direksi/pesero aktif & persetujuan komisaris/RUPS/pesero komanditer",
+  "masa_jabatan_ketentuan": "string (contoh: 5 Tahun - Berlaku s/d 12 Mei 2028, atau 'Tidak dibatasi jangka waktu (CV)')",
+  "status_kelengkapan_ahu": "string (contoh: Lengkap / SK AHU atau SKT SABU Terlampir / Belum Terlampir)",
   "red_flags": [
-    "string daftar peringatan penting untuk analis kredit (misal: pemegang saham PT, masa jabatan hampir habis, scan buram pada halaman X, dll)"
+    "string daftar peringatan penting untuk analis kredit (misal: persetujuan pesero komanditer/komisaris wajib dilampirkan, pemegang saham PT induk, masa jabatan hampir habis, scan buram pada halaman X, dll)"
   ],
   "kronologi_akta": [
     {
@@ -571,17 +571,17 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       "nomor_akta": "string",
       "tanggal_akta": "DD/MM/YYYY",
       "notaris": "Nama Notaris & Kota Kedudukan",
-      "sk_ahu": "Nomor & Tanggal SK Pengesahan / SPPP AHU (atau 'Belum Terlampir')",
+      "sk_ahu": "Nomor & Tanggal SK Pengesahan / SPPP AHU / SKT SABU (atau 'Belum Terlampir')",
       "pokok_perubahan": "Ringkasan padat isi/perubahan utama pada akta ini"
     }
   ],
   "susunan_pengurus": [
     {
       "nama": "string",
-      "jabatan": "Direktur Utama / Direktur / Komisaris Utama / Komisaris",
+      "jabatan": "Direktur Utama / Direktur / Komisaris / Pesero Aktif (Direktur) / Pesero Komanditer",
       "nik_npwp": "string",
       "tanggal_angkat": "DD/MM/YYYY",
-      "estimasi_akhir_jabatan": "DD/MM/YYYY",
+      "estimasi_akhir_jabatan": "DD/MM/YYYY atau Tidak Terbatas",
       "status": "Aktif / Kedaluwarsa / Perlu Cek"
     }
   ],
@@ -590,15 +590,15 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       "nama": "string",
       "tipe": "Perorangan / Badan Hukum (PT)",
       "nik_npwp": "string",
-      "jumlah_lembar": "string",
+      "jumlah_lembar": "string (atau '-' jika CV)",
       "nominal_rupiah": "string",
       "persentase": "string (contoh: 60%)",
-      "catatan_bo": "UBO (Wajib SLIK) / Wajib Lampirkan Akta Induk / Non-BO"
+      "catatan_bo": "UBO (Wajib SLIK) / Wajib Lampirkan Akta Induk / Pesero Komanditer / Non-BO"
     }
   ],
   "daftar_kbli": [
     {
-      "kode": "5 digit kode KBLI",
+      "kode": "5 digit kode KBLI (atau '-' jika akta lama belum mencantumkan kode KBLI)",
       "uraian": "Judul & deskripsi bidang usaha"
     }
   ]
@@ -815,8 +815,8 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
         ['Modal Ditempatkan', data.modalDitempatkan],
         ['Modal Disetor', data.modalDisetor],
         ['Ketentuan Masa Jabatan', data.masaJabatan],
-        ['Status Kelengkapan SK AHU', data.statusAHU],
-        ['Kewenangan Direksi & Persetujuan Jaminan', data.kewenangan],
+        ['Status Kelengkapan SK AHU / SABU', data.statusAHU],
+        ['Kewenangan Direksi / Pengurus & Persetujuan Jaminan', data.kewenangan],
         [''],
         ['CATATAN PENTING / RED FLAG UNDERWRITING'],
         ...(data.alerts.length ? data.alerts.map((a, i) => [`${i + 1}.`, a]) : [['-', 'Tidak ada catatan khusus']])
@@ -835,7 +835,7 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       // Sheet 3: Susunan Pengurus
       const wsPengurus = XLSX.utils.json_to_sheet(data.pengurus);
       wsPengurus['!cols'] = [
-        { wch: 30 }, { wch: 22 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 22 }
+        { wch: 30 }, { wch: 25 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 22 }
       ];
       XLSX.utils.book_append_sheet(wb, wsPengurus, '3_Susunan_Pengurus');
 
@@ -871,8 +871,8 @@ NAMA DEBITUR: ${data.namaPT.toUpperCase()}
 2. PERUBAHAN TERAKHIR: AKTA NO. ${lastAkta.No_Akta || '-'} TGL ${lastAkta.Tanggal_Akta || '-'} (${lastAkta.Nama_Kedudukan_Notaris || '-'}), SK: ${lastAkta.No_Tgl_SK_AHU || '-'}.
 3. PERMODALAN: DASAR ${data.modalDasar} | DITEMPATKAN ${data.modalDitempatkan} | DISETOR ${data.modalDisetor}.
 4. PENGURUS (${data.masaJabatan.toUpperCase()}): ${pengurusStr.toUpperCase()}.
-5. PEMEGANG SAHAM: ${sahamStr.toUpperCase()}.
-6. KEWENANGAN DIREKSI: ${data.kewenangan.toUpperCase()}.`;
+5. PEMEGANG SAHAM / MODAL: ${sahamStr.toUpperCase()}.
+6. KEWENANGAN PENGURUS: ${data.kewenangan.toUpperCase()}.`;
 
       navigator.clipboard.writeText(notepadText).then(() => {
         showToast('Format Notepad AOL berhasil disalin ke clipboard!');
