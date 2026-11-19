@@ -26,7 +26,6 @@
       padding: 2px 6px;
       border-radius: 4px;
     }
-    /* Custom scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -39,7 +38,7 @@
   <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="bg-blue-600 p-2 rounded-lg">
+        <div onclick="handleSecretAdminClick()" class="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg cursor-pointer transition select-none" title="Legal & Akta Summarizer">
           <i data-lucide="file-check-2" class="w-6 h-6 text-white"></i>
         </div>
         <div>
@@ -55,15 +54,22 @@
           Muat Contoh Hasil (Demo)
         </button>
 
-        <!-- API Key Input -->
-        <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5">
-          <i data-lucide="key" class="w-3.5 h-3.5 text-slate-400 mr-2"></i>
-          <input type="password" id="apiKeyInput" placeholder="Masukkan Gemini API Key..." 
-            class="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-40 sm:w-52"
-            onchange="saveApiKey(this.value)" />
-          <button onclick="toggleApiKeyVisibility()" class="text-slate-400 hover:text-white ml-1" title="Lihat/Sembunyikan API Key">
-            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+        <!-- Team PIN Input / Status -->
+        <div id="pinBoxContainer" class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5">
+          <i id="lockIcon" data-lucide="lock" class="w-3.5 h-3.5 text-amber-400 mr-2"></i>
+          <input type="password" id="teamPinInput" placeholder="Masukkan PIN Akses Tim..." 
+            class="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-40 sm:w-48"
+            onkeydown="if(event.key==='Enter') unlockWithPin()" />
+          <button id="unlockBtn" onclick="unlockWithPin()" class="text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold px-2.5 py-1 rounded ml-1.5 transition">
+            Buka Akses
           </button>
+        </div>
+
+        <!-- Unlocked Status Badge (Hidden by default) -->
+        <div id="unlockedBadge" class="hidden items-center gap-2 bg-emerald-950/80 border border-emerald-700/70 text-emerald-300 text-xs px-3 py-1.5 rounded-lg">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+          <span class="font-medium">Akses Tim Aktif</span>
+          <button onclick="logoutPin()" class="text-[11px] text-slate-400 hover:text-white underline ml-1" title="Kunci kembali">Kunci</button>
         </div>
       </div>
     </div>
@@ -90,7 +96,7 @@
           <input type="file" id="pdfInput" accept="application/pdf" multiple class="hidden" onchange="handleFiles(this.files)" />
           <i data-lucide="files" class="w-8 h-8 text-blue-500 mx-auto mb-2"></i>
           <p class="text-xs font-medium text-slate-700">Klik atau seret file PDF ke sini</p>
-          <p class="text-[11px] text-slate-400 mt-1">Akta Pendirian, Akta Perubahan, & SK Kemenkumham / SABU (Scan / Digital)</p>
+          <p class="text-[11px] text-slate-400 mt-1">Akta Pendirian, Akta Perubahan, & SK Kemenkumham / SABU (Maks. 18 MB)</p>
         </div>
 
         <!-- Uploaded File List -->
@@ -104,12 +110,16 @@
 
         <!-- Model Selection & Process Button -->
         <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2.5">
-          <div class="flex items-center justify-between">
-            <label class="text-xs text-slate-600 font-medium">Model AI Pembaca Scan:</label>
-            <select id="modelSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500">
-              <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (Cepat & Akurat)</option>
-              <option value="gemini-3.8-pro">Gemini 3.8 Pro (Scan Sulit/Kompleks)</option>
-            </select>
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-xs text-slate-600 font-medium shrink-0">Model AI Scan:</label>
+            <div class="flex items-center gap-1 flex-1 justify-end">
+              <select id="modelSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500 max-w-[210px]">
+                <option value="gemini-3.8-flash" selected>gemini-3.8-flash (Default)</option>
+              </select>
+              <button onclick="fetchAvailableModels(false)" title="Muat ulang daftar model Pro & Flash resmi" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
           </div>
 
           <button id="processBtn" onclick="processDocuments()" disabled
@@ -183,7 +193,7 @@
         </div>
         <h3 class="text-sm font-semibold text-slate-700">Belum Ada Data Akta yang Diekstrak</h3>
         <p class="text-xs text-slate-500 max-w-md mt-1 leading-relaxed">
-          Unggah dokumen PDF akta perusahaan di panel sebelah kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>. Sistem akan otomatis menyusun urutan akta dari pendirian hingga perubahan terakhir, mendeteksi kepemilikan saham/modal, masa jabatan pengurus, serta menyiapkan file Excel siap unduh.
+          Masukkan <b>PIN Akses Tim</b> di pojok kanan atas, unggah dokumen PDF akta perusahaan di panel kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>.
         </p>
       </div>
 
@@ -282,7 +292,7 @@
           </div>
         </div>
 
-        <!-- Card 3: Susunan Pengurus (Direksi & Komisaris / Pesero Aktif & Komanditer) -->
+        <!-- Card 3: Susunan Pengurus -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs font-semibold flex items-center gap-2">
@@ -308,7 +318,7 @@
           </div>
         </div>
 
-        <!-- Card 4: Susunan Pemegang Saham / Pemasukan Modal & Beneficial Owner -->
+        <!-- Card 4: Susunan Pemegang Saham -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs font-semibold flex items-center gap-2">
@@ -361,35 +371,262 @@
     </section>
   </main>
 
+  <!-- Hidden Admin Modal: PIN & API Key Encryptor -->
+  <div id="adminModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="bg-blue-100 text-blue-700 p-1.5 rounded-lg">
+            <i data-lucide="shield" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-800">Admin Setup: Generator PIN Akses Tim</h3>
+            <p class="text-[11px] text-slate-500">Enkripsi Gemini API Key dengan PIN pilihan Anda sendiri</p>
+          </div>
+        </div>
+        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">1. Masukkan Gemini API Key Asli (dari Google AI Studio)</label>
+          <input type="text" id="adminRawApiKey" placeholder="Contoh: AIzaSyD... atau AQ.Ab8..."
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 font-mono text-xs" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">2. Tentukan PIN Akses Tim Pilihan Anda</label>
+          <input type="text" id="adminDesiredPin" placeholder="Contoh: RADANA2026 atau 192837"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 font-semibold" />
+        </div>
+
+        <button onclick="generateEncryptedPayload()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition">
+          Generate Kode Enkripsi untuk GitHub
+        </button>
+
+        <div id="encryptedOutputBox" class="hidden space-y-1.5 pt-2">
+          <label class="block font-semibold text-emerald-700">3. Salin Kode Terenkripsi Ini ke File index.html GitHub:</label>
+          <textarea id="encryptedResultText" rows="3" readonly
+            class="w-full bg-slate-900 text-emerald-400 font-mono text-[11px] p-2.5 rounded-lg border border-slate-700 focus:outline-none"></textarea>
+          <button onclick="copyEncryptedCode()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 rounded-lg flex items-center justify-center gap-1.5">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            Salin Kode Terenkripsi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
     <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
-    <span id="toastMsg">Berhasil disalin!</span>
+    <span id="toastMsg">Berhasil!</span>
   </div>
 
   <script>
-    // Initialize Icons
     lucide.createIcons();
 
+    // =========================================================================
+    // KONFIGURASI KEAMANAN TIM (TEMPELKAN HASIL GENERATE ADMIN DI SINI)
+    // Ubah PIN_VERSION (misal: "v2") jika Anda mengganti PIN agar tim otomatis diminta PIN baru
+    // =========================================================================
+    const PIN_VERSION = "v1";
+    const ENCRYPTED_API_KEY = ""; 
+    // =========================================================================
+
+    let activeApiKey = "";
     let uploadedFiles = [];
     let currentData = null;
+    let adminClickCount = 0;
+    let adminClickTimer = null;
 
-    // Load saved API key on startup
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedKey = localStorage.getItem('gemini_legal_api_key');
-      if (savedKey) {
-        document.getElementById('apiKeyInput').value = savedKey;
+    // Secret trigger: Klik ikon biru di pojok kiri atas 5 kali untuk membuka Admin Generator
+    function handleSecretAdminClick() {
+      adminClickCount++;
+      clearTimeout(adminClickTimer);
+      adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 2000);
+      if (adminClickCount >= 5) {
+        adminClickCount = 0;
+        document.getElementById('adminModal').classList.remove('hidden');
+        document.getElementById('adminModal').classList.add('flex');
+      }
+    }
+
+    function closeAdminModal() {
+      document.getElementById('adminModal').classList.add('hidden');
+      document.getElementById('adminModal').classList.remove('flex');
+    }
+
+    // Web Crypto API (AES-GCM) Encryption & Decryption
+    async function deriveKey(pin, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]
+      );
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptApiKeyWithPin(apiKey, pin) {
+      const enc = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(pin, salt);
+      const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv }, key, enc.encode(apiKey)
+      );
+      const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+      combined.set(salt, 0);
+      combined.set(iv, salt.length);
+      combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+      return btoa(String.fromCharCode(...combined));
+    }
+
+    async function decryptApiKeyWithPin(base64Payload, pin) {
+      const combined = Uint8Array.from(atob(base64Payload), c => c.charCodeAt(0));
+      const salt = combined.slice(0, 16);
+      const iv = combined.slice(16, 28);
+      const ciphertext = combined.slice(28);
+      const key = await deriveKey(pin, salt);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv }, key, ciphertext
+      );
+      return new TextDecoder().decode(decrypted);
+    }
+
+    async function generateEncryptedPayload() {
+      const rawKey = document.getElementById('adminRawApiKey').value.trim();
+      const pin = document.getElementById('adminDesiredPin').value.trim();
+      if (!rawKey || !pin) {
+        alert('Mohon isi Gemini API Key asli dan PIN pilihan Anda.');
+        return;
+      }
+      const cipher = await encryptApiKeyWithPin(rawKey, pin);
+      document.getElementById('encryptedResultText').value = cipher;
+      document.getElementById('encryptedOutputBox').classList.remove('hidden');
+    }
+
+    function copyEncryptedCode() {
+      const txt = document.getElementById('encryptedResultText').value;
+      navigator.clipboard.writeText(txt).then(() => {
+        showToast('Kode terenkripsi disalin! Tempelkan ke ENCRYPTED_API_KEY di GitHub.');
+      });
+    }
+
+    // Unlock Flow on Page Load & Button Click
+    window.addEventListener('DOMContentLoaded', async () => {
+      const savedPin = localStorage.getItem(`team_pin_${PIN_VERSION}`);
+      if (savedPin && ENCRYPTED_API_KEY) {
+        await attemptUnlock(savedPin, true);
+      } else if (!ENCRYPTED_API_KEY) {
+        // Fallback jika admin belum menanamkan ENCRYPTED_API_KEY: izinkan input API Key langsung
+        document.getElementById('teamPinInput').placeholder = "Belum diset PIN (Klik ikon biru 5x)";
       }
     });
 
-    function saveApiKey(val) {
-      localStorage.setItem('gemini_legal_api_key', val.trim());
-      showToast('API Key disimpan secara lokal di browser.');
+    async function unlockWithPin() {
+      const pin = document.getElementById('teamPinInput').value.trim();
+      if (!pin) {
+        alert('Silakan masukkan PIN Akses Tim.');
+        return;
+      }
+      if (!ENCRYPTED_API_KEY) {
+        // Jika pengguna memasukkan API Key langsung saat belum diset PIN
+        if (pin.startsWith('AIza') || pin.startsWith('AQ.')) {
+          activeApiKey = pin;
+          setUnlockedUI();
+          fetchAvailableModels(true);
+          showToast('API Key aktif sementara.');
+          return;
+        }
+        alert('Admin belum menanamkan kode terenkripsi di GitHub. Klik ikon biru di pojok kiri atas 5 kali untuk setup.');
+        return;
+      }
+      await attemptUnlock(pin, false);
     }
 
-    function toggleApiKeyVisibility() {
-      const input = document.getElementById('apiKeyInput');
-      input.type = input.type === 'password' ? 'text' : 'password';
+    async function attemptUnlock(pin, silent) {
+      try {
+        const decryptedKey = await decryptApiKeyWithPin(ENCRYPTED_API_KEY, pin);
+        if (!decryptedKey || decryptedKey.length < 15) throw new Error('PIN salah');
+        activeApiKey = decryptedKey;
+        localStorage.setItem(`team_pin_${PIN_VERSION}`, pin);
+        setUnlockedUI();
+        fetchAvailableModels(true);
+        if (!silent) showToast('PIN benar! Akses aplikasi terbuka.');
+      } catch (e) {
+        localStorage.removeItem(`team_pin_${PIN_VERSION}`);
+        if (!silent) alert('PIN Akses Tim salah! Silakan periksa kembali PIN dari Admin Anda.');
+      }
+    }
+
+    function setUnlockedUI() {
+      document.getElementById('pinBoxContainer').classList.add('hidden');
+      document.getElementById('unlockedBadge').classList.remove('hidden');
+      document.getElementById('unlockedBadge').classList.add('flex');
+    }
+
+    function logoutPin() {
+      activeApiKey = "";
+      localStorage.removeItem(`team_pin_${PIN_VERSION}`);
+      document.getElementById('teamPinInput').value = "";
+      document.getElementById('pinBoxContainer').classList.remove('hidden');
+      document.getElementById('unlockedBadge').classList.add('hidden');
+      document.getElementById('unlockedBadge').classList.remove('flex');
+      showToast('Akses dikunci kembali.');
+    }
+
+    // Fetch valid Pro & Flash models automatically
+    async function fetchAvailableModels(silent = false) {
+      if (!activeApiKey) {
+        if (!silent) alert('Buka akses dengan PIN Tim terlebih dahulu.');
+        return;
+      }
+
+      const select = document.getElementById('modelSelect');
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(activeApiKey)}`);
+        if (!res.ok) throw new Error('Gagal mengambil daftar model');
+        const data = await res.json();
+
+        const validModels = (data.models || []).filter(m =>
+          m.supportedGenerationMethods &&
+          m.supportedGenerationMethods.includes('generateContent') &&
+          m.name.includes('gemini') &&
+          !m.name.includes('embedding') &&
+          !m.name.includes('imagen') &&
+          !m.name.includes('veo')
+        );
+
+        if (validModels.length > 0) {
+          validModels.sort((a, b) => {
+            const aIsFlash = a.name.includes('flash') ? 0 : 1;
+            const bIsFlash = b.name.includes('flash') ? 0 : 1;
+            if (aIsFlash !== bIsFlash) return aIsFlash - bIsFlash;
+            return b.name.localeCompare(a.name);
+          });
+
+          select.innerHTML = validModels.map((m, idx) => {
+            const modelId = m.name.replace('models/', '');
+            const isPro = modelId.includes('pro');
+            const label = isPro
+              ? `${modelId} (Mode Pro - Scan Sulit)`
+              : `${modelId} (Mode Cepat)`;
+            return `<option value="${modelId}" ${idx === 0 ? 'selected' : ''}>${label}</option>`;
+          }).join('');
+
+          if (!silent) showToast(`Berhasil memuat ${validModels.length} model resmi (Flash & Pro)!`);
+        }
+      } catch (e) {
+        console.warn('Auto-load models fallback:', e);
+      }
     }
 
     function showToast(msg) {
@@ -443,9 +680,12 @@
         return;
       }
 
+      const totalBytes = uploadedFiles.reduce((acc, f) => acc + f.size, 0);
+      const totalMB = (totalBytes / 1024 / 1024).toFixed(1);
+
       container.classList.remove('hidden');
       processBtn.disabled = false;
-      countText.textContent = `${uploadedFiles.length} file PDF siap dianalisis`;
+      countText.innerHTML = `${uploadedFiles.length} file PDF (Total: <b class="${totalMB > 18 ? 'text-red-600' : 'text-slate-700'}">${totalMB} MB</b>)`;
 
       list.innerHTML = uploadedFiles.map((file, idx) => `
         <li class="flex items-center justify-between bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs group transition">
@@ -504,12 +744,11 @@
       });
     }
 
-    // Main Extraction Function using Gemini API
+    // Main Extraction Function
     async function processDocuments() {
-      const apiKey = document.getElementById('apiKeyInput').value.trim();
-      if (!apiKey) {
-        alert('Silakan masukkan Gemini API Key Anda terlebih dahulu di pojok kanan atas.');
-        document.getElementById('apiKeyInput').focus();
+      if (!activeApiKey) {
+        alert('Aplikasi masih terkunci. Silakan masukkan PIN Akses Tim di pojok kanan atas terlebih dahulu.');
+        document.getElementById('teamPinInput').focus();
         return;
       }
 
@@ -523,7 +762,7 @@
 
       processBtn.disabled = true;
       statusBox.classList.remove('hidden');
-      statusTitle.textContent = `Membaca ${uploadedFiles.length} dokumen PDF...`;
+      statusTitle.textContent = `Membaca ${uploadedFiles.length} dokumen PDF (${model})...`;
       statusDesc.textContent = 'Mengonversi halaman scan & mengirim ke AI Legal Analyzer.';
 
       try {
@@ -604,7 +843,7 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
   ]
 }`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(activeApiKey)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -637,7 +876,7 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
 
       } catch (err) {
         console.error(err);
-        alert(`Terjadi kesalahan saat memproses dokumen:\n${err.message}\n\nPastikan API Key valid dan ukuran total PDF tidak melebihi batas.`);
+        alert(`Terjadi kesalahan saat memproses dokumen:\n${err.message}`);
       } finally {
         processBtn.disabled = false;
         statusBox.classList.add('hidden');
@@ -659,7 +898,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       document.getElementById('exportExcelBtn').disabled = false;
       document.getElementById('copyAolBtn').disabled = false;
 
-      // Red Flags
       const alertsBox = document.getElementById('alertsBox');
       const alertsList = document.getElementById('alertsList');
       if (data.red_flags && data.red_flags.length > 0) {
@@ -669,7 +907,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
         alertsBox.classList.add('hidden');
       }
 
-      // General Info
       document.getElementById('resNamaPT').innerHTML = formatCellHighlight(data.nama_perusahaan);
       document.getElementById('resAlamat').innerHTML = formatCellHighlight(data.tempat_kedudukan_alamat);
       document.getElementById('resModalDasar').innerHTML = formatCellHighlight(data.modal_dasar);
@@ -679,7 +916,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       document.getElementById('resMasaJabatan').innerHTML = formatCellHighlight(data.masa_jabatan_ketentuan);
       document.getElementById('resStatusAHU').innerHTML = formatCellHighlight(data.status_kelengkapan_ahu);
 
-      // Kronologi Akta Table
       const kronologiBody = document.getElementById('kronologiTableBody');
       kronologiBody.innerHTML = (data.kronologi_akta || []).map((item, idx) => `
         <tr class="hover:bg-slate-50">
@@ -693,7 +929,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
         </tr>
       `).join('');
 
-      // Susunan Pengurus Table
       const pengurusBody = document.getElementById('pengurusTableBody');
       pengurusBody.innerHTML = (data.susunan_pengurus || []).map(p => `
         <tr class="hover:bg-slate-50">
@@ -706,7 +941,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
         </tr>
       `).join('');
 
-      // Pemegang Saham Table
       const sahamBody = document.getElementById('sahamTableBody');
       sahamBody.innerHTML = (data.pemegang_saham || []).map(s => `
         <tr class="hover:bg-slate-50">
@@ -720,7 +954,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
         </tr>
       `).join('');
 
-      // KBLI Table
       const kbliBody = document.getElementById('kbliTableBody');
       kbliBody.innerHTML = (data.daftar_kbli || []).map(k => `
         <tr class="hover:bg-slate-50">
@@ -730,7 +963,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       `).join('');
     }
 
-    // Sync edited HTML tables back to clean JSON object before export
     function scrapeEditedData() {
       const cleanText = (el) => el ? el.innerText.trim() : '-';
 
@@ -798,12 +1030,10 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       };
     }
 
-    // Export to Multi-Sheet Excel (.xlsx)
     function exportToExcel() {
       const data = scrapeEditedData();
       const wb = XLSX.utils.book_new();
 
-      // Sheet 1: Ringkasan Legal
       const summaryRows = [
         ['RINGKASAN LEGAL & UNDERWRITING AKTA PERUSAHAAN'],
         ['Tanggal Generate', new Date().toLocaleDateString('id-ID')],
@@ -825,28 +1055,24 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       wsSummary['!cols'] = [{ wch: 38 }, { wch: 85 }];
       XLSX.utils.book_append_sheet(wb, wsSummary, '1_Ringkasan_Legal');
 
-      // Sheet 2: Kronologi Akta
       const wsKronologi = XLSX.utils.json_to_sheet(data.kronologi);
       wsKronologi['!cols'] = [
         { wch: 8 }, { wch: 24 }, { wch: 15 }, { wch: 15 }, { wch: 35 }, { wch: 35 }, { wch: 50 }
       ];
       XLSX.utils.book_append_sheet(wb, wsKronologi, '2_Kronologi_Akta');
 
-      // Sheet 3: Susunan Pengurus
       const wsPengurus = XLSX.utils.json_to_sheet(data.pengurus);
       wsPengurus['!cols'] = [
         { wch: 30 }, { wch: 25 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 22 }
       ];
       XLSX.utils.book_append_sheet(wb, wsPengurus, '3_Susunan_Pengurus');
 
-      // Sheet 4: Pemegang Saham
       const wsSaham = XLSX.utils.json_to_sheet(data.saham);
       wsSaham['!cols'] = [
         { wch: 32 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 12 }, { wch: 35 }
       ];
       XLSX.utils.book_append_sheet(wb, wsSaham, '4_Pemegang_Saham');
 
-      // Sheet 5: Daftar KBLI
       const wsKbli = XLSX.utils.json_to_sheet(data.kbli);
       wsKbli['!cols'] = [{ wch: 15 }, { wch: 70 }];
       XLSX.utils.book_append_sheet(wb, wsKbli, '5_Daftar_KBLI');
@@ -856,7 +1082,6 @@ Kembalikan output HANYA dalam format JSON valid (tanpa markdown backticks) denga
       showToast('File Excel (.xlsx) berhasil diunduh!');
     }
 
-    // Copy Format Notepad AOL / Memo Kredit
     function copyAolNotepad() {
       const data = scrapeEditedData();
       const firstAkta = data.kronologi[0] || {};
@@ -879,7 +1104,6 @@ NAMA DEBITUR: ${data.namaPT.toUpperCase()}
       });
     }
 
-    // Load Demo Data for Testing Without API Key
     function loadDemoData() {
       const demo = {
         nama_perusahaan: "PT BORNEO TRANS LOGISTIK MANDIRI",
