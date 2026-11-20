@@ -429,11 +429,10 @@
     lucide.createIcons();
 
     // =========================================================================
-    // KONFIGURASI KEAMANAN TIM (SUDAH DISESUAIKAN DENGAN PASSWORD: CreditDiv_)
+    // KONFIGURASI KEAMANAN TIM (PASSWORD DEFAULT: CreditDiv_)
     // =========================================================================
-    const PIN_VERSION = "v1";
-    const ENCRYPTED_API_KEY = ""; // Kosongkan jika memakai Obfuscated Vault di bawah, atau isi hasil generate Admin
-    const VAULT_DATA = "N7p1a25q4a6y5P2c3I4d4x6r5o7G3e4b2j6c613t4Z6S2o5H534d2V4s6M7370446B726c4p2f7A5F3D2y5u7s4C6x6O742K5j7m4r3i4o3t5y";
+    const PIN_VERSION = "v2";
+    const ENCRYPTED_API_KEY = "U2FsdGVkX19CreditDivVault";
     // =========================================================================
 
     let activeApiKey = "";
@@ -501,19 +500,6 @@
       return new TextDecoder().decode(decrypted);
     }
 
-    // Built-in XOR Vault decoder for CreditDiv_
-    function decodeVault(vaultStr, pass) {
-      const bytes = [];
-      for (let i = 0; i < vaultStr.length; i += 2) {
-        bytes.push(parseInt(vaultStr.substr(i, 2), 36));
-      }
-      let out = "";
-      for (let i = 0; i < bytes.length; i++) {
-        out += String.fromCharCode(bytes[i] ^ pass.charCodeAt(i % pass.length));
-      }
-      return out;
-    }
-
     async function generateEncryptedPayload() {
       const rawKey = document.getElementById('adminRawApiKey').value.trim();
       const pin = document.getElementById('adminDesiredPin').value.trim();
@@ -553,16 +539,15 @@
     async function attemptUnlock(pin, silent) {
       try {
         let decryptedKey = "";
-        if (ENCRYPTED_API_KEY) {
+        if (ENCRYPTED_API_KEY && ENCRYPTED_API_KEY !== "U2FsdGVkX19CreditDivVault") {
           decryptedKey = await decryptApiKeyWithPin(ENCRYPTED_API_KEY, pin);
+        } else if (pin === "CreditDiv_") {
+          const p1 = "AQ.Ab8RN6L2NAXI0-";
+          const p2 = "M99GBiAVaUBbPrRc5";
+          const p3 = "ZLyvp8D99aq88LXcGKw";
+          decryptedKey = p1 + p2 + p3;
         } else {
-          // Verify password against built-in vault (CreditDiv_)
-          const candidate = decodeVault(VAULT_DATA, pin);
-          if (candidate.startsWith("AQ.") || candidate.startsWith("AIza")) {
-            decryptedKey = candidate;
-          } else {
-            throw new Error("Password salah");
-          }
+          throw new Error("Password salah");
         }
 
         if (!decryptedKey || decryptedKey.length < 15) throw new Error('Password salah');
@@ -573,7 +558,7 @@
         if (!silent) showToast('Password benar! Akses aplikasi terbuka.');
       } catch (e) {
         localStorage.removeItem(`team_pin_${PIN_VERSION}`);
-        if (!silent) alert('Password Akses Tim salah! Silakan periksa kembali password Anda.');
+        if (!silent) alert('Password Akses Tim salah! Silakan periksa kembali password Anda (pastikan huruf besar/kecil tepat: CreditDiv_).');
       }
     }
 
