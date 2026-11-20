@@ -113,10 +113,10 @@
           <div class="flex items-center justify-between gap-2">
             <label class="text-xs text-slate-600 font-medium shrink-0">Model AI Scan:</label>
             <div class="flex items-center gap-1 flex-1 justify-end">
-              <select id="modelSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500 max-w-[210px]">
+              <select id="modelSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500 max-w-[215px]">
                 <option value="gemini-3.8-flash" selected>gemini-3.8-flash (Default)</option>
               </select>
-              <button onclick="fetchAvailableModels(false)" title="Muat ulang daftar model Pro & Flash resmi" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200 transition">
+              <button onclick="fetchAvailableModels(false)" title="Muat ulang daftar model resmi" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200 transition">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -433,7 +433,7 @@
     // Ubah PIN_VERSION (misal: "v2") jika Anda mengganti PIN agar tim otomatis diminta PIN baru
     // =========================================================================
     const PIN_VERSION = "v1";
-    const ENCRYPTED_API_KEY = "FVajbyLmSnX4USuToTqc/j8HPibf+03jPGMrWVpT9pw00i0GGvjN/kW2s/JNCAH9Ae9EkfwhSNp55Jm5qd+GAgFYE1HTGBh8UvX1O9+iPMcbdQ3HYAmDxCR2Rq1WpUZRsA"; 
+    const ENCRYPTED_API_KEY = ""; 
     // =========================================================================
 
     let activeApiKey = "";
@@ -526,7 +526,6 @@
       if (savedPin && ENCRYPTED_API_KEY) {
         await attemptUnlock(savedPin, true);
       } else if (!ENCRYPTED_API_KEY) {
-        // Fallback jika admin belum menanamkan ENCRYPTED_API_KEY: izinkan input API Key langsung
         document.getElementById('teamPinInput').placeholder = "Belum diset PIN (Klik ikon biru 5x)";
       }
     });
@@ -538,7 +537,6 @@
         return;
       }
       if (!ENCRYPTED_API_KEY) {
-        // Jika pengguna memasukkan API Key langsung saat belum diset PIN
         if (pin.startsWith('AIza') || pin.startsWith('AQ.')) {
           activeApiKey = pin;
           setUnlockedUI();
@@ -583,7 +581,7 @@
       showToast('Akses dikunci kembali.');
     }
 
-    // Fetch valid Pro & Flash models automatically
+    // Fetch valid Flash & Pro models and lock default to gemini-3.8-flash / gemini-2.5-flash
     async function fetchAvailableModels(silent = false) {
       if (!activeApiKey) {
         if (!silent) alert('Buka akses dengan PIN Tim terlebih dahulu.');
@@ -600,29 +598,40 @@
           m.supportedGenerationMethods &&
           m.supportedGenerationMethods.includes('generateContent') &&
           m.name.includes('gemini') &&
+          !m.name.includes('omni') &&
           !m.name.includes('embedding') &&
           !m.name.includes('imagen') &&
-          !m.name.includes('veo')
+          !m.name.includes('veo') &&
+          !m.name.includes('tts') &&
+          !m.name.includes('robotics') &&
+          !m.name.includes('computer-use')
         );
 
         if (validModels.length > 0) {
+          // Prioritaskan gemini-3.8-flash atau gemini-2.5-flash sebagai default teratas
           validModels.sort((a, b) => {
-            const aIsFlash = a.name.includes('flash') ? 0 : 1;
-            const bIsFlash = b.name.includes('flash') ? 0 : 1;
-            if (aIsFlash !== bIsFlash) return aIsFlash - bIsFlash;
-            return b.name.localeCompare(a.name);
+            const getScore = (name) => {
+              if (name.includes('3.8-flash') && !name.includes('lite') && !name.includes('preview')) return 1;
+              if (name.includes('3.8-flash') && !name.includes('lite')) return 2;
+              if (name.includes('2.5-flash') && !name.includes('lite') && !name.includes('preview')) return 3;
+              if (name.includes('2.5-flash') && !name.includes('lite')) return 4;
+              if (name.includes('flash')) return 5;
+              if (name.includes('pro')) return 6;
+              return 7;
+            };
+            return getScore(a.name) - getScore(b.name);
           });
 
           select.innerHTML = validModels.map((m, idx) => {
             const modelId = m.name.replace('models/', '');
             const isPro = modelId.includes('pro');
-            const label = isPro
-              ? `${modelId} (Mode Pro - Scan Sulit)`
-              : `${modelId} (Mode Cepat)`;
+            const label = idx === 0
+              ? `${modelId} (Default - Cepat & Akurat)`
+              : (isPro ? `${modelId} (Mode Pro)` : `${modelId}`);
             return `<option value="${modelId}" ${idx === 0 ? 'selected' : ''}>${label}</option>`;
           }).join('');
 
-          if (!silent) showToast(`Berhasil memuat ${validModels.length} model resmi (Flash & Pro)!`);
+          if (!silent) showToast(`Model terkunci otomatis ke ${select.value}!`);
         }
       } catch (e) {
         console.warn('Auto-load models fallback:', e);
