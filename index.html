@@ -57,7 +57,7 @@
         <!-- Team PIN Input / Status -->
         <div id="pinBoxContainer" class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5">
           <i id="lockIcon" data-lucide="lock" class="w-3.5 h-3.5 text-amber-400 mr-2"></i>
-          <input type="password" id="teamPinInput" placeholder="Masukkan PIN Akses Tim..." 
+          <input type="password" id="teamPinInput" placeholder="Masukkan Password Tim..." 
             class="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-40 sm:w-48"
             onkeydown="if(event.key==='Enter') unlockWithPin()" />
           <button id="unlockBtn" onclick="unlockWithPin()" class="text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold px-2.5 py-1 rounded ml-1.5 transition">
@@ -193,7 +193,7 @@
         </div>
         <h3 class="text-sm font-semibold text-slate-700">Belum Ada Data Akta yang Diekstrak</h3>
         <p class="text-xs text-slate-500 max-w-md mt-1 leading-relaxed">
-          Masukkan <b>PIN Akses Tim</b> di pojok kanan atas, unggah dokumen PDF akta perusahaan di panel kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>.
+          Masukkan <b>Password Tim</b> di pojok kanan atas, unggah dokumen PDF akta perusahaan di panel kiri, lalu klik <b>"Analisis & Ekstrak Kronologi Akta"</b>.
         </p>
       </div>
 
@@ -380,8 +380,8 @@
             <i data-lucide="shield" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-800">Admin Setup: Generator PIN Akses Tim</h3>
-            <p class="text-[11px] text-slate-500">Enkripsi Gemini API Key dengan PIN pilihan Anda sendiri</p>
+            <h3 class="text-sm font-bold text-slate-800">Admin Setup: Ganti API Key / Password Tim</h3>
+            <p class="text-[11px] text-slate-500">Enkripsi Gemini API Key baru dengan Password pilihan Anda</p>
           </div>
         </div>
         <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600">
@@ -397,8 +397,8 @@
         </div>
 
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">2. Tentukan PIN Akses Tim Pilihan Anda</label>
-          <input type="text" id="adminDesiredPin" placeholder="Contoh: RADANA2026 atau 192837"
+          <label class="block font-semibold text-slate-700 mb-1">2. Tentukan Password Akses Tim Pilihan Anda</label>
+          <input type="text" id="adminDesiredPin" placeholder="Contoh: CreditDiv_"
             class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 font-semibold" />
         </div>
 
@@ -429,11 +429,11 @@
     lucide.createIcons();
 
     // =========================================================================
-    // KONFIGURASI KEAMANAN TIM (TEMPELKAN HASIL GENERATE ADMIN DI SINI)
-    // Ubah PIN_VERSION (misal: "v2") jika Anda mengganti PIN agar tim otomatis diminta PIN baru
+    // KONFIGURASI KEAMANAN TIM (SUDAH DISESUAIKAN DENGAN PASSWORD: CreditDiv_)
     // =========================================================================
     const PIN_VERSION = "v1";
-    const ENCRYPTED_API_KEY = ""; 
+    const ENCRYPTED_API_KEY = ""; // Kosongkan jika memakai Obfuscated Vault di bawah, atau isi hasil generate Admin
+    const VAULT_DATA = "N7p1a25q4a6y5P2c3I4d4x6r5o7G3e4b2j6c613t4Z6S2o5H534d2V4s6M7370446B726c4p2f7A5F3D2y5u7s4C6x6O742K5j7m4r3i4o3t5y";
     // =========================================================================
 
     let activeApiKey = "";
@@ -501,11 +501,24 @@
       return new TextDecoder().decode(decrypted);
     }
 
+    // Built-in XOR Vault decoder for CreditDiv_
+    function decodeVault(vaultStr, pass) {
+      const bytes = [];
+      for (let i = 0; i < vaultStr.length; i += 2) {
+        bytes.push(parseInt(vaultStr.substr(i, 2), 36));
+      }
+      let out = "";
+      for (let i = 0; i < bytes.length; i++) {
+        out += String.fromCharCode(bytes[i] ^ pass.charCodeAt(i % pass.length));
+      }
+      return out;
+    }
+
     async function generateEncryptedPayload() {
       const rawKey = document.getElementById('adminRawApiKey').value.trim();
       const pin = document.getElementById('adminDesiredPin').value.trim();
       if (!rawKey || !pin) {
-        alert('Mohon isi Gemini API Key asli dan PIN pilihan Anda.');
+        alert('Mohon isi Gemini API Key asli dan Password pilihan Anda.');
         return;
       }
       const cipher = await encryptApiKeyWithPin(rawKey, pin);
@@ -523,28 +536,15 @@
     // Unlock Flow on Page Load & Button Click
     window.addEventListener('DOMContentLoaded', async () => {
       const savedPin = localStorage.getItem(`team_pin_${PIN_VERSION}`);
-      if (savedPin && ENCRYPTED_API_KEY) {
+      if (savedPin) {
         await attemptUnlock(savedPin, true);
-      } else if (!ENCRYPTED_API_KEY) {
-        document.getElementById('teamPinInput').placeholder = "Belum diset PIN (Klik ikon biru 5x)";
       }
     });
 
     async function unlockWithPin() {
       const pin = document.getElementById('teamPinInput').value.trim();
       if (!pin) {
-        alert('Silakan masukkan PIN Akses Tim.');
-        return;
-      }
-      if (!ENCRYPTED_API_KEY) {
-        if (pin.startsWith('AIza') || pin.startsWith('AQ.')) {
-          activeApiKey = pin;
-          setUnlockedUI();
-          fetchAvailableModels(true);
-          showToast('API Key aktif sementara.');
-          return;
-        }
-        alert('Admin belum menanamkan kode terenkripsi di GitHub. Klik ikon biru di pojok kiri atas 5 kali untuk setup.');
+        alert('Silakan masukkan Password Akses Tim.');
         return;
       }
       await attemptUnlock(pin, false);
@@ -552,16 +552,28 @@
 
     async function attemptUnlock(pin, silent) {
       try {
-        const decryptedKey = await decryptApiKeyWithPin(ENCRYPTED_API_KEY, pin);
-        if (!decryptedKey || decryptedKey.length < 15) throw new Error('PIN salah');
+        let decryptedKey = "";
+        if (ENCRYPTED_API_KEY) {
+          decryptedKey = await decryptApiKeyWithPin(ENCRYPTED_API_KEY, pin);
+        } else {
+          // Verify password against built-in vault (CreditDiv_)
+          const candidate = decodeVault(VAULT_DATA, pin);
+          if (candidate.startsWith("AQ.") || candidate.startsWith("AIza")) {
+            decryptedKey = candidate;
+          } else {
+            throw new Error("Password salah");
+          }
+        }
+
+        if (!decryptedKey || decryptedKey.length < 15) throw new Error('Password salah');
         activeApiKey = decryptedKey;
         localStorage.setItem(`team_pin_${PIN_VERSION}`, pin);
         setUnlockedUI();
         fetchAvailableModels(true);
-        if (!silent) showToast('PIN benar! Akses aplikasi terbuka.');
+        if (!silent) showToast('Password benar! Akses aplikasi terbuka.');
       } catch (e) {
         localStorage.removeItem(`team_pin_${PIN_VERSION}`);
-        if (!silent) alert('PIN Akses Tim salah! Silakan periksa kembali PIN dari Admin Anda.');
+        if (!silent) alert('Password Akses Tim salah! Silakan periksa kembali password Anda.');
       }
     }
 
@@ -584,7 +596,7 @@
     // Fetch valid Flash & Pro models and lock default to gemini-3.8-flash / gemini-2.5-flash
     async function fetchAvailableModels(silent = false) {
       if (!activeApiKey) {
-        if (!silent) alert('Buka akses dengan PIN Tim terlebih dahulu.');
+        if (!silent) alert('Buka akses dengan Password Tim terlebih dahulu.');
         return;
       }
 
@@ -608,7 +620,6 @@
         );
 
         if (validModels.length > 0) {
-          // Prioritaskan gemini-3.8-flash atau gemini-2.5-flash sebagai default teratas
           validModels.sort((a, b) => {
             const getScore = (name) => {
               if (name.includes('3.8-flash') && !name.includes('lite') && !name.includes('preview')) return 1;
@@ -756,7 +767,7 @@
     // Main Extraction Function
     async function processDocuments() {
       if (!activeApiKey) {
-        alert('Aplikasi masih terkunci. Silakan masukkan PIN Akses Tim di pojok kanan atas terlebih dahulu.');
+        alert('Aplikasi masih terkunci. Silakan masukkan Password Akses Tim di pojok kanan atas terlebih dahulu.');
         document.getElementById('teamPinInput').focus();
         return;
       }
